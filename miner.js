@@ -9,10 +9,11 @@ const crypto = require('crypto')
 // Описание класса
 module.exports = class MinerThread {
     constructor(rigName, username) {
-        return (async () => {
+        (async () => {
             // Задаем свойства класса
             this.rigName = rigName
             this.username = username
+            this.performanceLog = []
 
             // Получаем пул
             this.pool = await this.#getPool()
@@ -31,12 +32,15 @@ module.exports = class MinerThread {
                     this.#sendJobRequest()
                 })
             })
+            return
         })()
     }
 
     async #getPool() {
         let response = await fetch('https://server.duinocoin.com/getPool')
-        return await response.json()
+        let data = await response.json()
+        console.log(data)
+        return data
     }
 
     #sendJobRequest() {
@@ -45,17 +49,24 @@ module.exports = class MinerThread {
 
         // По получению задачи
         this.worker.once('data', (data) => {
+            let jobStart = performance.now()
             let job = data.split(',')
             let previous = job[0]
-            let exprected = job[1]
+            let expected = job[1]
             let difficulty = job[2]
+            let isHashFound = false
 
             // Для нахождения добавочного числа (ответа), проходимся по циклу, размер которого
             // меняется в зависимости от сложности задачи
             for (let nonce = 0; nonce < 100 * difficulty + 1; nonce++) {
                 let hash = crypto.createHash('sha1').update(previous + nonce).digest('hex')
-                if (hash == exprected) {
-                    this.worker.write(`${nonce},,NodeJS miner (k04an), ${this.rigName}`)
+                if (hash == expected) {
+                    let jobEnd = performance.now()
+                    this.performanceLog.push({
+                        time: jobEnd - jobStart,
+                        HPS: nonce / (jobEnd - jobStart)
+                    })
+                    this.worker.write(`${nonce},${nonce / ((jobEnd - jobStart) / 1000)},NodeJS miner (k04an), ${this.rigName}`)
                     break
                 }
             }

@@ -7,3 +7,7 @@ const scr = rl.createInterface(process.stdin, process.stdout)
 const chalk = require('chalk')
 
 // 84 столбцов ширина cmd шиндовс
+
+module.exports = () => {
+    
+}
