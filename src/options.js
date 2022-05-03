@@ -47,7 +47,7 @@ module.exports.getOptions = async () => {
             // FIXME: Файл переписывается при любом расскладе, даже если .env полностью заполнен
             let data =`walletname=${userdata.walletname}\n`
             data += `threads_number=${userdata.threadsNumber}`
-            await fs.writeFile(path.join(__dirname, '.env'), data)
+            await fs.writeFile(path.join(__dirname, '..', '.env'), data)
 
             resolve(userdata)
         })
