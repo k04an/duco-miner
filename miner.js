@@ -1,5 +1,5 @@
-// MinerThread.js
-// Здесь описан класс еденичного потока майнера, который может быть размножен
+// miner.js
+// Здесь описан класс майнера
 
 // Импортируем зависимости
 const net = require('net')
@@ -8,12 +8,17 @@ const crypto = require('crypto')
 
 // Описание класса
 module.exports = class MinerThread {
-    constructor(rigName, username) {
+    constructor(id, rigName, username) {
         (async () => {
             // Задаем свойства класса
+            this.id = id
             this.rigName = rigName
             this.username = username
             this.performanceLog = []
+            for (let i = 0; i < 20; i++) {
+                this.performanceLog.push({time: 0, HPS: 0})
+            }
+            this.isOnline = false
 
             // Получаем пул
             this.pool = await this.#getPool()
@@ -29,6 +34,7 @@ module.exports = class MinerThread {
             this.worker.on('connect', () => {
                 this.worker.once('data', () => {
                     // TODO: Сделать что-нибудь с версией сервера
+                    this.isOnline = true
                     this.#sendJobRequest()
                 })
             })
@@ -38,9 +44,7 @@ module.exports = class MinerThread {
 
     async #getPool() {
         let response = await fetch('https://server.duinocoin.com/getPool')
-        let data = await response.json()
-        console.log(data)
-        return data
+        return await response.json()
     }
 
     #sendJobRequest() {
@@ -62,11 +66,12 @@ module.exports = class MinerThread {
                 let hash = crypto.createHash('sha1').update(previous + nonce).digest('hex')
                 if (hash == expected) {
                     let jobEnd = performance.now()
+                    this.performanceLog.shift()
                     this.performanceLog.push({
-                        time: jobEnd - jobStart,
-                        HPS: nonce / (jobEnd - jobStart)
+                        time: Math.round(jobEnd - jobStart),
+                        HPS: Math.round(nonce / ((jobEnd - jobStart) / 1000))
                     })
-                    this.worker.write(`${nonce},${nonce / ((jobEnd - jobStart) / 1000)},NodeJS miner (k04an), ${this.rigName}`)
+                    this.worker.write(`${nonce},${Math.round(nonce / ((jobEnd - jobStart) / 1000))},NodeJS miner (k04an), ${this.rigName}`)
                     break
                 }
             }

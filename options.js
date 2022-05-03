@@ -1,4 +1,4 @@
-// optionsHandler.js
+// options.js
 // Данный модуль проверяет заполненость файла .env
 // и при отсутствии нужной информации получает ее от пользователя
 
@@ -15,37 +15,41 @@ let userdata = {
 }
 
 module.exports.getOptions = async () => {
-    // Запрашиваем у пользователя недостающие данные
-    inquirer
-    .prompt(
-        [
-            {
-                type: 'input',
-                name: 'walletname',
-                message: 'Enter name of your DUCO wallet:'
-            },
-            {
-                type: 'input',
-                name: 'threadsNumber',
-                message: `Number of threads to use (max ${OS.cpus().length})`,
-                validate(answer) {
-                    if (!Number(answer) || Number(answer) > OS.cpus().length) return false
-                    else return true
-                },  
-                filter(answer) {
-                    return Math.round(answer)
+    return new Promise((resolve, reject) => {
+        // Запрашиваем у пользователя недостающие данные
+        inquirer
+        .prompt(
+            [
+                {
+                    type: 'input',
+                    name: 'walletname',
+                    message: 'Enter name of your DUCO wallet:'
+                },
+                {
+                    type: 'input',
+                    name: 'threadsNumber',
+                    message: `Number of threads to use (max ${OS.cpus().length})`,
+                    validate(answer) {
+                        if (!Number(answer) || Number(answer) > OS.cpus().length) return false
+                        else return true
+                    },  
+                    filter(answer) {
+                        return Math.round(answer)
+                    }
                 }
-            }
-        ],
-        userdata
-    )
-    .then(async (answers) => {
-        userdata = answers
-        
-        // Переписываем .env с новыми данными
-        // FIXME: Файл переписывается при любом расскладе, даже если .env полностью заполнен
-        let data =`walletname=${userdata.walletname}\n`
-        data += `threads_number=${userdata.threadsNumber}`
-        await fs.writeFile(path.join(__dirname, '.env'), data)
+            ],
+            userdata
+        )
+        .then(async (answers) => {
+            userdata = answers
+            
+            // Переписываем .env с новыми данными
+            // FIXME: Файл переписывается при любом расскладе, даже если .env полностью заполнен
+            let data =`walletname=${userdata.walletname}\n`
+            data += `threads_number=${userdata.threadsNumber}`
+            await fs.writeFile(path.join(__dirname, '.env'), data)
+
+            resolve(userdata)
+        })
     })
 }
