@@ -41,6 +41,10 @@ module.exports = class MinerThread {
         })()
     }
 
+    startMiners() {
+        this.#sendJobRequest()
+    }
+
     async #getPool() {
         let response = await fetch('https://server.duinocoin.com/getPool')
         return await response.json()
@@ -89,7 +93,7 @@ module.exports = class MinerThread {
                         break
                 }
                 // TODO: Добавить завершения разгадываения
-                this.#sendJobRequest()
+                if (this.status == 'online') this.#sendJobRequest()
             })
         })
     }

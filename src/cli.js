@@ -6,6 +6,7 @@ const chalk = require('chalk')
 const clui = require('clui')
 const rl = require('readline')
 const app = require('./app')
+// const eventBus = require('./eventbus')
 
 module.exports.data = {
     active: true,
@@ -13,24 +14,25 @@ module.exports.data = {
     nameReplace: false
 }
 
-process.stdin.on('keypress', (str, key) => {
-    switch (key.name) {
-        case 'f2':
-            module.exports.data.active = !module.exports.data.active
-            flush()
-            break
-    }
-
-    // Регистрируем комбинацию выхода из приложения, так как из-за перехвата
-    // нажатий стандарная комбинация перестает работать
-    if (key.name == 'c' && key.ctrl) process.exit()
-})
-
 // Запуск цикла отрисовки интерфейса
 module.exports.init = () => {
     console.clear()
 
     flush()
+
+    process.stdin.on('keypress', (str, key) => {
+        switch (key.name) {
+            case 'f2':
+                module.exports.data.active = !module.exports.data.active
+                app.toggleMiners(module.exports.data.active)
+                flush()
+                break
+        }
+    
+        // Регистрируем комбинацию выхода из приложения, так как из-за перехвата
+        // нажатий стандарная комбинация перестает работать
+        if (key.name == 'c' && key.ctrl) process.exit()
+    })
 
     setInterval(() => {
         flush()
@@ -91,6 +93,10 @@ const flush = () => {
             case 'online':
                 status = chalk.green('Online')
                 break
+            
+            case 'paused':
+                status = chalk.yellow('Paused')
+                break
         }
 
         new clui.Line(buffer)
@@ -105,5 +111,5 @@ const flush = () => {
     buffer.output()
     process.stdin.resume()
     rl.emitKeypressEvents(process.stdin, buffer)
-    process.stdin.setRawMode(true)
+    if (process.stdin.isTTY) process.stdin.setRawMode(true)
 }
