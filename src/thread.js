@@ -5,18 +5,14 @@
 const miner = require('./miner')
 const { workerData, parentPort } = require('worker_threads')
 
-const minerData = new miner(workerData.id, 'Custom rig', workerData.walletname)
+const minerData = new miner('Custom rig', workerData.walletname)
 
-parentPort.postMessage({
-    id: minerData.id,
-    isOnline: minerData.isOnline,
-    performanceLog: minerData.performanceLog
-})
+const sendMinerData = () => {
+    parentPort.postMessage(JSON.stringify(minerData))
+}
 
+// Переодически отправляем информацию в главный поток
+sendMinerData()
 setInterval(() => {
-    parentPort.postMessage({
-        id: minerData.id,
-        isOnline: minerData.isOnline,
-        performanceLog: minerData.performanceLog
-    })
+    sendMinerData()
 }, 1500)

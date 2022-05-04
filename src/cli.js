@@ -66,24 +66,37 @@ const flush = () => {
 
     // Рисуем заголовки таблицы
     new clui.Line(buffer)
-        .column('Miner ID', 15)
         .column('Status', 10)
-        .column('Performance (ms per hash)', 45)
+        .column('Performance (ms per hash)', 40)
         .column('Avarage hashrate')
         .fill()
         .store()
 
     // Выводим информацию о каждом майнере
     app.miners.forEach(miner => {
+        // Считаем средний хешрейт
         let hpsSum = 0
         miner.performanceLog.forEach(entry => {
             hpsSum += entry.HPS
         })
+        let avgHPS = Math.round(hpsSum / miner.performanceLog.length)
+
+        // Определяем статус
+        let status
+        switch (miner.status) {
+            case 'offline':
+                status = chalk.red('Offline')
+                break
+
+            case 'online':
+                status = chalk.green('Online')
+                break
+        }
+
         new clui.Line(buffer)
-            .column(miner.id, 15)
-            .column(miner.isOnline ? chalk.green('Online') : chalk.red('Offline'), 10)
-            .column(clui.Sparkline(miner.performanceLog.map(entry => {return entry.time})), 45)
-            .column(`${hpsSum / miner.performanceLog.length} h/s`)
+            .column(status, 10)
+            .column(clui.Sparkline(miner.performanceLog.map(entry => {return entry.time})), 40)
+            .column(`${avgHPS} h/s`)
             .fill()
             .store()
     })

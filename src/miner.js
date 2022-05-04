@@ -8,17 +8,16 @@ const crypto = require('crypto')
 
 // Описание класса
 module.exports = class MinerThread {
-    constructor(id, rigName, username) {
+    constructor(rigName, username) {
         (async () => {
             // Задаем свойства класса
-            this.id = id
             this.rigName = rigName
             this.username = username
             this.performanceLog = []
             for (let i = 0; i < 20; i++) {
                 this.performanceLog.push({time: 0, HPS: 0})
             }
-            this.isOnline = false
+            this.status = 'offline'
 
             // Получаем пул
             this.pool = await this.#getPool()
@@ -34,7 +33,7 @@ module.exports = class MinerThread {
             this.worker.on('connect', () => {
                 this.worker.once('data', () => {
                     // TODO: Сделать что-нибудь с версией сервера
-                    this.isOnline = true
+                    this.status = 'online'
                     this.#sendJobRequest()
                 })
             })
@@ -71,6 +70,8 @@ module.exports = class MinerThread {
                         time: Math.round(jobEnd - jobStart),
                         HPS: Math.round(nonce / ((jobEnd - jobStart) / 1000))
                     })
+                    // TODO: Добавить minerID для объеденения потоков в единый пункт в кошельке
+                    // https://github.com/revoxhere/duino-coin/blob/master/PC_Miner.py:1250
                     this.worker.write(`${nonce},${Math.round(nonce / ((jobEnd - jobStart) / 1000))},NodeJS miner (k04an), ${this.rigName}`)
                     break
                 }

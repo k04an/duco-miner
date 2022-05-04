@@ -18,12 +18,11 @@ options.getOptions()
         for (let minerId = 0; minerId < options.threadsNumber; minerId++) {
             let thread = new Worker(path.join(__dirname, 'thread.js'), {
                 workerData: {
-                    id: `thread${minerId}`,
                     walletname: options.walletname,
                 }
             })
             thread.on('message', (miner) => {
-                module.exports.miners[minerId] = miner
+                module.exports.miners[minerId] = JSON.parse(miner)
             })
             
         }
