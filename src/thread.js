@@ -5,7 +5,7 @@
 const miner = require('./miner')
 const { workerData, parentPort } = require('worker_threads')
 
-const minerData = new miner('Custom rig', workerData.walletname)
+const minerData = new miner('Custom rig', workerData.walletname, workerData.threadId)
 
 const sendMinerData = () => {
     parentPort.postMessage(JSON.stringify(minerData))
