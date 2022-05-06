@@ -21,19 +21,21 @@ options.getOptions()
 
         // Создаем потоки
         for (let minerId = 0; minerId < options.threadsNumber; minerId++) {
-            let thread = new Worker(path.join(__dirname, 'thread.js'), {
-                workerData: {
-                    walletname: options.walletname,
-                    threadId: threadId
-                }
-            })
-            module.exports.threads.push(thread)
-
-            // Получаем копию экземпляра майнера в массив
-            thread.on('message', (miner) => {
-                module.exports.miners[minerId] = JSON.parse(miner)
-            })
-            
+            setTimeout(() => {
+                let thread = new Worker(path.join(__dirname, 'thread.js'), {
+                    workerData: {
+                        walletname: options.walletname,
+                        threadId: threadId,
+                        threadNumber: minerId
+                    }
+                })
+                module.exports.threads.push(thread)
+    
+                // Получаем копию экземпляра майнера в массив
+                thread.on('message', (miner) => {
+                    module.exports.miners[minerId] = JSON.parse(miner)
+                })
+            }, minerId * 1000)
         }
         
         // Функция для отправки стоп команды в потоки

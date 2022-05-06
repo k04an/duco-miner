@@ -5,10 +5,11 @@
 const net = require('net')
 const fetch = require('node-fetch')
 const crypto = require('crypto')
+const Logger = require('./logger')
 
 // Описание класса
 module.exports = class MinerThread {
-    constructor(rigName, username, threadId) {
+    constructor(rigName, username, threadId, logId) {
         (async () => {
             // Задаем свойства класса
             this.rigName = rigName
@@ -16,29 +17,41 @@ module.exports = class MinerThread {
             this.performanceLog = []
             this.status = 'offline'
             this.threadId = threadId
+            this.logId = logId
 
             for (let i = 0; i < 20; i++) {
                 this.performanceLog.push({time: 0, HPS: 0})
             }
 
-            // Получаем пул
-            this.pool = await this.#getPool()
-
             // Создаем TCP сокет для связи с сервером
             this.worker = new net.Socket()
-            this.worker.setTimeout(6000)
             this.worker.setEncoding('utf-8')
+
+            this.logger = new Logger(this.logId)
+
+            this.logger.log('Getting pool...')
+            // Получаем пул
+            this.pool = await this.#getPool()
+            this.logger.log(`Got pool - ${JSON.stringify(this.pool)}`)
+
+            // Подключаемся к пулу
+            this.logger.log('Connecting to pool...')
             this.worker.connect(this.pool.port, this.pool.ip)
 
             // Обработчики событий
             // При подключении пул сразу отправляет версию сервера, которую мы получаем
             this.worker.on('connect', () => {
-                this.worker.once('data', () => {
+                this.logger.log('Connected!')
+                this.worker.once('data', (version) => {
                     // TODO: Сделать что-нибудь с версией сервера
+                    this.logger.log(`Pool version - v${version}`)
                     this.status = 'online'
                     this.#sendJobRequest()
                 })
             })
+
+            this.worker.on('close', (hadError) => this.logger.log('CONNECTION CLOSED!' + String(hadError)))
+            this.worker.on('error', () => this.logger.log('GOT ERROR!'))
             return
         })()
     }
@@ -54,10 +67,12 @@ module.exports = class MinerThread {
 
     #sendJobRequest() {
         // Отправляем запрос на получение задачи
+        this.logger.log('Requesting job...')
         this.worker.write(`JOB,${this.username},LOW`)
 
         // По получению задачи
-        this.worker.once('data', (data) => {
+        this.worker.once('data', async (data) => {
+            await this.logger.log(`Got job - ${data}`)
             let jobStart = performance.now()
             let job = data.split(',')
             let previous = job[0]
@@ -67,9 +82,11 @@ module.exports = class MinerThread {
 
             // Для нахождения добавочного числа (ответа), проходимся по циклу, размер которого
             // меняется в зависимости от сложности задачи
+            await this.logger.log('Start solving...')
             for (let nonce = 0; nonce < 100 * difficulty + 1; nonce++) {
                 let hash = crypto.createHash('sha1').update(previous + nonce).digest('hex')
                 if (hash == expected) {
+                    await this.logger.log('Hash is cracked!')
                     let jobEnd = performance.now()
                     this.performanceLog.shift()
                     this.performanceLog.push({
@@ -82,9 +99,12 @@ module.exports = class MinerThread {
                     break
                 }
             }
+            await this.logger.log('Loop is over!')
 
             // После отправки разгадонного ответа, ждем подтвержение что он был корректен
+            this.logger.log('Waiting for response...')
             this.worker.once('data', (response) => {
+                this.logger.log(`Got response - ${response}`)
                 switch (response) {
                     case 'GOOD':
                         // TODO: Как-нибудь обработать успешное разгадывание (статистика или типо того)
@@ -95,7 +115,9 @@ module.exports = class MinerThread {
                         break
                 }
                 // TODO: Добавить завершения разгадываения
-                if (this.status == 'online') this.#sendJobRequest()
+                setTimeout(() => {
+                    if (this.status == 'online') this.#sendJobRequest()
+                }, 1000)
             })
         })
     }

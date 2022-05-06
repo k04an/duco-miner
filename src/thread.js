@@ -4,8 +4,10 @@
 // Импортируем зависимости
 const miner = require('./miner')
 const { workerData, parentPort } = require('worker_threads')
+const Logger = require('./logger')
 
-const minerData = new miner('Custom rig', workerData.walletname, workerData.threadId)
+// Создаем экземпляр майнера
+const minerData = new miner('Custom rig', workerData.walletname, workerData.threadId, workerData.threadNumber)
 
 const sendMinerData = () => {
     parentPort.postMessage(JSON.stringify(minerData))
