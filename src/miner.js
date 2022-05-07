@@ -35,23 +35,29 @@ module.exports = class MinerThread {
             this.logger.log(`Got pool - ${JSON.stringify(this.pool)}`)
 
             // Подключаемся к пулу
-            this.logger.log('Connecting to pool...')
-            this.worker.connect(this.pool.port, this.pool.ip)
+            await this.#connectToPool()
 
-            // Обработчики событий
-            // При подключении пул сразу отправляет версию сервера, которую мы получаем
-            this.worker.on('connect', () => {
-                this.logger.log('Connected!')
-                this.worker.once('data', (version) => {
-                    // TODO: Сделать что-нибудь с версией сервера
-                    this.logger.log(`Pool version - v${version}`)
-                    this.status = 'online'
-                    this.#sendJobRequest()
-                })
+            // При неожиданном разрыве соединения, переподключаемся и продолжаем майнить
+            this.worker.on('close', async () => {
+                if (this.status === 'online') {
+                    this.status = 'offline'
+                    await this.logger.log('CONNECTION CLOSED! Reconnecting...')
+
+                    // Делаем небольшую задержку, для того чтобы создались обработчики
+                    // которые должны быть удалены
+                    setTimeout(async () => {
+                        // Удалаяем оставшиеся обработчики во избежании отправки лишних запросов
+                        this.worker.removeAllListeners('data')
+
+                        // Запрашиваем новую задачу
+                        await this.#connectToPool()
+                        this.#sendJobRequest()
+                    }, 1000)
+                }
             })
 
-            this.worker.on('close', (hadError) => this.logger.log('CONNECTION CLOSED!' + String(hadError)))
-            this.worker.on('error', () => this.logger.log('GOT ERROR!'))
+            // Запрашиваем задачу
+            this.#sendJobRequest()
             return
         })()
     }
@@ -63,6 +69,24 @@ module.exports = class MinerThread {
     async #getPool() {
         let response = await fetch('https://server.duinocoin.com/getPool')
         return await response.json()
+    }
+
+    #connectToPool() {
+        return new Promise((resolve, reject) => {
+            this.logger.log('Connecting to pool...')
+            this.worker.connect(this.pool.port, this.pool.ip)
+
+            // При подключении, пул сразу отправляет версию сервера, которую мы получаем
+            this.worker.once('connect', () => {
+                this.logger.log('Connected!')
+                this.worker.once('data', (version) => {
+                    // TODO: Сделать что-нибудь с версией сервера
+                    this.logger.log(`Pool version - v${version}`)
+                    this.status = 'online'
+                    resolve()
+                })
+            })
+        })
     }
 
     #sendJobRequest() {
@@ -84,18 +108,23 @@ module.exports = class MinerThread {
             // меняется в зависимости от сложности задачи
             await this.logger.log('Start solving...')
             for (let nonce = 0; nonce < 100 * difficulty + 1; nonce++) {
+                // Создаем хеш
                 let hash = crypto.createHash('sha1').update(previous + nonce).digest('hex')
+
+                // Если созданный хеш совпадает с тем что отправил нам сервер...
                 if (hash == expected) {
                     await this.logger.log('Hash is cracked!')
+
+                    // Записываем время потраченное на взлом хеша
                     let jobEnd = performance.now()
                     this.performanceLog.shift()
                     this.performanceLog.push({
                         time: Math.round(jobEnd - jobStart),
                         HPS: Math.round(nonce / ((jobEnd - jobStart) / 1000))
                     })
-                    // TODO: Добавить minerID для объеденения потоков в единый пункт в кошельке
-                    // https://github.com/revoxhere/duino-coin/blob/master/PC_Miner.py:1250
-                    this.worker.write(`${nonce},${Math.round(nonce / ((jobEnd - jobStart) / 1000))},NodeJS miner (k04an), ${this.rigName},,${this.threadId}`)
+
+                    // Отправляем результат
+                    if (this.status === 'online') this.worker.write(`${nonce},${Math.round(nonce / ((jobEnd - jobStart) / 1000))},NodeJS miner (k04an), ${this.rigName},,${this.threadId}`)
                     break
                 }
             }
@@ -116,7 +145,7 @@ module.exports = class MinerThread {
                 }
                 // TODO: Добавить завершения разгадываения
                 setTimeout(() => {
-                    if (this.status == 'online') this.#sendJobRequest()
+                    this.#sendJobRequest()
                 }, 1000)
             })
         })
