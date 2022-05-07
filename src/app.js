@@ -26,7 +26,8 @@ options.getOptions()
                     workerData: {
                         walletname: options.walletname,
                         threadId: threadId,
-                        threadNumber: minerId
+                        threadNumber: minerId,
+                        rigName: options.rigName
                     }
                 })
                 module.exports.threads.push(thread)

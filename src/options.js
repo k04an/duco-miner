@@ -11,7 +11,8 @@ const path = require('path')
 // Пишем данные из .env в объект
 let userdata = {
     walletname: process.env.walletname,
-    threadsNumber: process.env.threads_number
+    threadsNumber: process.env.threads_number,
+    rigName: process.env.rig_name
 }
 
 module.exports.getOptions = async () => {
@@ -36,6 +37,16 @@ module.exports.getOptions = async () => {
                     filter(answer) {
                         return Math.round(answer)
                     }
+                },
+                {
+                    type: 'input',
+                    name: 'rigName',
+                    message: 'Name for the rig (random by default):',
+                    filter(answer) {
+                        // При пустом ответе, создаем случайное имя для рига
+                        if (answer == '') return 'Node-' + (Math.random() + 1).toString(36).substring(2)
+                        else answer
+                    }
                 }
             ],
             userdata
@@ -46,7 +57,8 @@ module.exports.getOptions = async () => {
             // Переписываем .env с новыми данными
             // FIXME: Файл переписывается при любом расскладе, даже если .env полностью заполнен
             let data =`walletname=${userdata.walletname}\n`
-            data += `threads_number=${userdata.threadsNumber}`
+            data += `threads_number=${userdata.threadsNumber}\n`
+            data += `rig_name=${userdata.rigName}`
             await fs.writeFile(path.join(__dirname, '..', '.env'), data)
 
             resolve(userdata)

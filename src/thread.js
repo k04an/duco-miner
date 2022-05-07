@@ -7,7 +7,7 @@ const { workerData, parentPort } = require('worker_threads')
 const Logger = require('./logger')
 
 // Создаем экземпляр майнера
-const minerData = new miner('Custom rig', workerData.walletname, workerData.threadId, workerData.threadNumber)
+const minerData = new miner(workerData.rigName, workerData.walletname, workerData.threadId, workerData.threadNumber)
 
 const sendMinerData = () => {
     parentPort.postMessage(JSON.stringify(minerData))
