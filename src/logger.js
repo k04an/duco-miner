@@ -8,11 +8,15 @@ const path = require('path')
 module.exports = class Logger {
     constructor (id) {
         this.id = id
+
+        // Если папка для логов не существует, то создаем ее
+        fs.mkdir(path.join(__dirname, '..', 'logs'))
+            .catch(err => {})
     }
 
     async log(data) {
         const timeStamp = new Date()
         const msg = `[${this.id}][${timeStamp.toISOString()}] ${data}\n`
-        await fs.appendFile(path.join(__dirname, '..', `thread${this.id}.log`), msg)
+        await fs.appendFile(path.join(__dirname, '..', 'logs', `thread${this.id}.log`), msg)
     }
 }
