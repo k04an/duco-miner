@@ -45,7 +45,7 @@ module.exports.getOptions = async () => {
                     filter(answer) {
                         // При пустом ответе, создаем случайное имя для рига
                         if (answer == '') return 'Node-' + (Math.random() + 1).toString(36).substring(2)
-                        else answer
+                        else return answer
                     }
                 }
             ],

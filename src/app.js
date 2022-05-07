@@ -1,13 +1,13 @@
 // app.js
 // Главный файл приложения реализующий основную логику
 
-// Получаем данные из файла .env
-require('dotenv').config()
-
 // Импортируем зависимости
+const path = require('path')
+require('dotenv').config({
+    path: path.join(__dirname, '..', '.env')
+})
 const cli = require('./cli')
 const options = require('./options')
-const path = require('path')
 const { Worker } = require('worker_threads')
 
 // Получаем данные настроек
