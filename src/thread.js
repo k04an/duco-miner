@@ -5,13 +5,21 @@
 const miner = require('./miner')
 const { workerData, parentPort } = require('worker_threads')
 const Logger = require('./logger')
+const osUtils = require('os-utils')
 
 // Создаем экземпляр майнера
 const minerData = new miner(workerData.rigName, workerData.walletname, workerData.threadId, workerData.threadNumber)
 
 const sendMinerData = () => {
-    parentPort.postMessage(JSON.stringify(minerData))
+    osUtils.cpuUsage((per) => {
+        parentPort.postMessage({
+            minerData: JSON.stringify(minerData),
+            cpuUsage: Math.round(per * 100)
+        })
+    })
 }
+
+
 
 // Обработчик получения команды от главного потока
 parentPort.on('message', (command) => {

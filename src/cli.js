@@ -6,7 +6,7 @@ const chalk = require('chalk')
 const clui = require('clui')
 const rl = require('readline')
 const app = require('./app')
-// const eventBus = require('./eventbus')
+const os = require('os')
 
 module.exports.data = {
     active: true,
@@ -61,7 +61,55 @@ const flush = () => {
     .fill()
     .store()
 
-    // Отступ
+    // Заголовок блока общей информации
+    new clui.Line(buffer)
+        .padding(24)
+        .column(chalk.cyan('General information'))
+        .fill()
+        .store()
+
+    // Информация о ОС и суммарный хешрейт
+
+    let totalHashrate = 0
+    app.miners.forEach(miner => {
+        let hpsSum = 0
+        miner.performanceLog.forEach(entry => {
+            hpsSum += entry.HPS
+        }) 
+        totalHashrate += Math.round(hpsSum / miner.performanceLog.length)
+    })    
+
+    new clui.Line(buffer)
+        .column(`${chalk.cyan('OS:')} ${chalk.red(os.version())}`)
+        .padding(3)
+        .column(chalk.cyan(`Arch: ${chalk.red(os.arch())}`))
+        .padding(3)
+        .column(chalk.cyan(`CPU number: ${os.cpus().length == 0 ? chalk.bgRed.white('Unknown') : chalk.red(os.cpus().length)}`))
+        .padding(3)
+        .column(chalk.cyan(`Total hashrate: ${chalk.red(totalHashrate)} h/s`))
+        .fill()
+        .store()
+
+    // Информация о загрузке процессора
+    // Считаем среднюю загрузку процессора
+    let avgCpuUsage = 0
+    app.cpuUsages.forEach(cpuUsage => {
+        avgCpuUsage += Number(cpuUsage)
+    })
+    avgCpuUsage = Math.round(avgCpuUsage / app.cpuUsages.length)
+    
+    // Определеяем сообщение на вывод
+    let cpuStatus
+    if (os.cpus().length == 0) cpuStatus = chalk.red('Unknown')
+    else if (!avgCpuUsage) cpuStatus = chalk.green('Loading...')
+    else cpuStatus = clui.Gauge(avgCpuUsage, 100, 40, 80, chalk.cyan(`${avgCpuUsage}%`))
+
+    new clui.Line(buffer)
+        .column(chalk.cyan('CPU usage: '))
+        .column(cpuStatus)
+        .fill()
+        .store()
+
     new clui.Line(buffer)
         .fill()
         .store()

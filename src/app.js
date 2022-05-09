@@ -15,6 +15,7 @@ options.getOptions()
     .then(options => {
         module.exports.miners = []
         module.exports.threads = []
+        module.exports.cpuUsages = []
         // Генерирум число-идентификатор, позволяющее объединить потоки майнера
         // в единую строку в кошельке
         let threadId = Math.round(Math.random() * 2811)
@@ -33,8 +34,9 @@ options.getOptions()
                 module.exports.threads.push(thread)
     
                 // Получаем копию экземпляра майнера в массив
-                thread.on('message', (miner) => {
-                    module.exports.miners[minerId] = JSON.parse(miner)
+                thread.on('message', (threadData) => {
+                    module.exports.miners[minerId] = JSON.parse(threadData.minerData)
+                    module.exports.cpuUsages[minerId] = threadData.cpuUsage
                 })
             }, minerId * 1000)
         }
