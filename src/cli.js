@@ -80,7 +80,7 @@ const flush = () => {
     })    
 
     new clui.Line(buffer)
-        .column(`${chalk.cyan('OS:')} ${chalk.red(os.version())}`)
+        .column(`${chalk.cyan('OS:')} ${chalk.red(os.platform())}`)
         .padding(3)
         .column(chalk.cyan(`Arch: ${chalk.red(os.arch())}`))
         .padding(3)
