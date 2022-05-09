@@ -29,9 +29,9 @@ module.exports.getOptions = async () => {
                 {
                     type: 'input',
                     name: 'threadsNumber',
-                    message: `Number of threads to use (max ${OS.cpus().length})`,
+                    message: `Number of threads to use (max ${OS.cpus().length == 0 ? 'whatever' : OS.cpus().length})`,
                     validate(answer) {
-                        if (!Number(answer) || Number(answer) > OS.cpus().length) return false
+                        if (!Number(answer) || (Number(answer) > OS.cpus().length && OS.cpus().length != 0)) return false
                         else return true
                     },  
                     filter(answer) {
